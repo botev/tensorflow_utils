@@ -39,6 +39,8 @@ def data_format(device=None):
         return "channels_last"
     elif device == "gpu":
         return "channels_first"
+    elif device == "tpu":
+        raise NotImplementedError("tpu")
     else:
         raise NotImplementedError()
 
@@ -52,8 +54,10 @@ def channels_axis(device=None):
     """
     if data_format(device) == "channels_first":
         return 1
-    else:
+    elif data_format(device) == "channels_last":
         return -1
+    else:
+        raise NotImplementedError()
 
 
 def to_channel_format(x, x_format="nchw", device=None):
@@ -62,7 +66,7 @@ def to_channel_format(x, x_format="nchw", device=None):
 
     Args:
         x: Tensor
-        x_format: String.  One of ['channel', 'ncwh', 'nwhc']
+        x_format: String.  One of ['channel', 'nchw', 'nhwc']
         device: String.  Non-default device to use.
     Returns:
          The input `x` with correctly ordered axes.
@@ -71,12 +75,12 @@ def to_channel_format(x, x_format="nchw", device=None):
         return x
     elif x.shape.ndims == 3:
         return tf.expand_dims(x, channels_axis(device))
-    elif x_format.lower() == "ncwh":
+    elif x_format.lower() == "nchw":
         if data_format() == "channels_first":
             return x
         else:
             return tf.transpose(x, [0, 3, 1, 2])
-    elif x_format.lower() == "nwhc":
+    elif x_format.lower() == "nhwc":
         if data_format() == "channels_last":
             return x
         else:
@@ -85,14 +89,14 @@ def to_channel_format(x, x_format="nchw", device=None):
         raise ValueError("Unrecognized channels format " + x_format)
 
 
-def from_channel_format(x, target_format="ncwh", device=None):
+def from_channel_format(x, target_format="nchw", device=None):
     """
     Converts the input to the target channels format based on the device.
     The input is always assumed to be in the correct channels format.
 
     Args:
         x: Tensor
-        target_format: String.  One of ['channel', 'nwh', 'ncwh', 'nwhc']
+        target_format: String.  One of ['channel', 'nhw', 'nchw', 'nhwc']
         device: String.  Non-default device to use.
     Returns:
          The input `x` with correctly ordered axes.
@@ -101,14 +105,14 @@ def from_channel_format(x, target_format="ncwh", device=None):
         return x
     elif x.shape.ndims == 3:
         raise NotImplementedError()
-    elif target_format == "nwh":
+    elif target_format.lower() == "nhw":
         return tf.reshape(x, (x.shape[0], x.shape[2], x.shape[3]))
-    elif target_format.lower() == "ncwh":
+    elif target_format.lower() == "nchw":
         if data_format(device) == "channels_first":
             return x
         else:
             return tf.transpose(x, [0, 3, 1, 2])
-    elif target_format.lower() == "nwhc":
+    elif target_format.lower() == "nhwc":
         if data_format(device) == "channels_last":
             return x
         else:
