@@ -1,4 +1,5 @@
 import tensorflow as tf
+from math import pi
 
 __all__ = [
     "calculate_variance_factor",
@@ -154,10 +155,15 @@ def gaussian_regularizer(mode="FAN_AVG",
 
     def _log_prob_fn(tensor):
         stddev = tf.sqrt(scale_factor / calculate_variance_factor(tensor.shape, mode))
-        dist = tf.distributions.Normal(loc=mean, scale=stddev)
-        log_prob = tf.reduce_sum(dist.log_prob(tensor))
+        z = (tensor - mean) / stddev
+        log_prob_z = - (z ** 2 + tf.log(2 * pi)) / 2
+        log_prob = tf.reduce_sum(log_prob_z)
         if truncated:
+            from numpy import inf
             log_prob -= tf.log(TRUNCATED_NORMALIZER)
-        return log_prob
+            invalid = tf.logical_or(tf.less_equal(z, -2), tf.greater_equal(z, 2))
+            log_prob = tf.where(invalid, -inf, log_prob)
+        # Return negative as this is a regularizer
+        return - log_prob
 
     return _log_prob_fn
