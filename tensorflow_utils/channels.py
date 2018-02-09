@@ -79,12 +79,12 @@ def to_channel_format(x, x_format="nchw", device=None):
         if data_format() == "channels_first":
             return x
         else:
-            return tf.transpose(x, [0, 3, 1, 2])
+            return tf.transpose(x, [0, 2, 3, 1])
     elif x_format.lower() == "nhwc":
         if data_format() == "channels_last":
             return x
         else:
-            return tf.transpose(x, [0, 2, 3, 1])
+            return tf.transpose(x, [0, 3, 1, 2])
     else:
         raise ValueError("Unrecognized channels format " + x_format)
 

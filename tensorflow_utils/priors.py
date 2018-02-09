@@ -104,12 +104,11 @@ def gaussian_initializer(mode="FAN_AVG",
         TypeError: if `mode` is not in ['NULL', 'FAN_IN', 'FAN_OUT', 'FAN_AVG'].
         ValueError: if `scale_factor` is an integer.
     """
+    scale_factor = tf.convert_to_tensor(scale_factor, dtype=tf.float32)
     if not dtype.is_floating:
         raise TypeError("Cannot create initializer for non-floating point type.")
     if mode not in ["NULL", "FAN_IN", "FAN_OUT", "FAN_AVG"]:
         raise TypeError("Unknown mode %s [NULL, FAN_IN, FAN_OUT, FAN_AVG]", mode)
-    if isinstance(scale_factor, tf.numbers.Integral):
-        raise ValueError("scale_factor cannot be an integer: %s" % (scale_factor,))
 
     def _initializer(shape, dtype=dtype, partition_info=None):
         if not dtype.is_floating:
