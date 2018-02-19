@@ -1,6 +1,6 @@
+from warnings import warn
 import tensorflow as tf
-from tensorflow.python import pywrap_tensorflow as tf_session
-import numpy as np
+from .channels import channels_axis
 
 __all__ = [
     "activation_from_string",
@@ -11,9 +11,21 @@ __all__ = [
 ]
 
 
+def celu(x, axis=None):
+    """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but then with ELU """
+    if axis is not None:
+        return tf.nn.elu(tf.concat(values=[x, -x], axis=axis))
+    if x.shape.ndims == 2:
+        return tf.nn.elu(tf.concat(values=[x, -x], axis=1))
+    else:
+        return tf.nn.elu(tf.concat(values=[x, -x], axis=channels_axis()))
+
+
 def activation_from_string(name, *args, **kwargs):
     """
     Returns a callable activation function.
+
+    *** If name is not a string will return it instead and print a warning ***
 
     Args:
         name: String. Name of the activation function.
@@ -26,18 +38,25 @@ def activation_from_string(name, *args, **kwargs):
     Raises:
         NotImplementedError: if the `name` is not found.
     """
-    if name == "tanh":
+    if not isinstance(name, str):
+        warn("activation_from_string was given not a string, but " + str(name))
+        return name
+    elif name == "tanh":
         return tf.tanh
     elif name == "sigmoid":
         return tf.sigmoid
     elif name == "relu":
         return tf.nn.relu
+    elif name == "crelu":
+        return tf.nn.crelu
     elif name == "lrelu":
         return lambda x: tf.nn.leaky_relu(x, *args, **kwargs)
     elif name == "lrelu_01":
         return lambda x: tf.nn.leaky_relu(x, 0.1)
     elif name == "elu":
         return tf.nn.elu
+    elif name == "celu":
+        return  celu
     elif name == "selu":
         return tf.nn.selu
     else:
