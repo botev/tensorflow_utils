@@ -12,16 +12,21 @@ __all__ = [
 ]
 
 
+LOCAL_DEVICE_PROTOS = None
+
+
 def default_device():
     """
     Returns:
         What is the default tensorflow device on your machine.
         Order of precedence is [TPU, GPU, CPU].
     """
-    local_device_protos = device_lib.list_local_devices()
-    if len([x.name for x in local_device_protos if x.device_type == 'TPU']) > 0:
+    global LOCAL_DEVICE_PROTOS
+    if LOCAL_DEVICE_PROTOS is None:
+        LOCAL_DEVICE_PROTOS = device_lib.list_local_devices()
+    if len([x.name for x in LOCAL_DEVICE_PROTOS if x.device_type == 'TPU']) > 0:
         return "tpu"
-    elif len([x.name for x in local_device_protos if x.device_type == 'GPU']) > 0:
+    elif len([x.name for x in LOCAL_DEVICE_PROTOS if x.device_type == 'GPU']) > 0:
         return "gpu"
     else:
         return "cpu"

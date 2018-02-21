@@ -12,7 +12,7 @@ __all__ = [
 
 
 def celu(x, axis=None):
-    """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but then with ELU """
+    """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but with ELU """
     if axis is not None:
         return tf.nn.elu(tf.concat(values=[x, -x], axis=axis))
     if x.shape.ndims == 2:
@@ -56,7 +56,7 @@ def activation_from_string(name, *args, **kwargs):
     elif name == "elu":
         return tf.nn.elu
     elif name == "celu":
-        return  celu
+        return celu
     elif name == "selu":
         return tf.nn.selu
     else:
