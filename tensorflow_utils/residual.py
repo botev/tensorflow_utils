@@ -134,29 +134,27 @@ def unet_resnet(x, num_main_blocks, num_res_blocks,
         x = tf.layers.conv2d(x, filters, name="conv_in",
                              kernel_size=in_kernel_size, strides=1,
                              kernel_initializer=gaussian_initializer(),
-                             padding="SAME")
-        # Encoder
-        with tf.variable_scope("encoder"):
-            # First block does not reduce spatial dimensions or increase filter size
-            with tf.variable_scope("block_0"):
+                             data_format=data_format(), padding="SAME")
+        # First block does not reduce spatial dimensions or increase filter size
+        with tf.variable_scope("block_0"):
+            # Repeated residual blocks
+            for res_block in range(num_res_blocks[0]):
+                x = res_block_func(x, filters=filters, name="res_" + str(res_block), **kwargs)
+            # Append for skip connections
+            skips.append(x)
+
+        # Normal blocks
+        for main_block, res_blocks in enumerate(num_res_blocks[1:]):
+            with tf.variable_scope("block_" + str(main_block + 1)):
+                # Increase number of filters
+                filters *= filters_factor
+                # Initial convolution to shrink spatial dimensions
+                x = res_block_func(x, filters=filters, name="res_0", strides=spatial_factor, **kwargs)
                 # Repeated residual blocks
-                for res_block in range(num_res_blocks[0]):
+                for res_block in range(1, res_blocks):
                     x = res_block_func(x, filters=filters, name="res_" + str(res_block), **kwargs)
                 # Append for skip connections
                 skips.append(x)
-
-            # Normal blocks
-            for main_block, res_blocks in enumerate(num_res_blocks[1:]):
-                with tf.variable_scope("block_" + str(main_block + 1)):
-                    # Increase number of filters
-                    filters *= filters_factor
-                    # Initial convolution to shrink spatial dimensions
-                    x = res_block_func(x, filters=filters, name="res_0", strides=spatial_factor, **kwargs)
-                    # Repeated residual blocks
-                    for res_block in range(1, res_blocks):
-                        x = res_block_func(x, filters=filters, name="res_" + str(res_block), **kwargs)
-                    # Append for skip connections
-                    skips.append(x)
 
         # Bottleneck transformation does not go for skips
         with tf.variable_scope("bottleneck"):
@@ -168,29 +166,27 @@ def unet_resnet(x, num_main_blocks, num_res_blocks,
             for res_block in range(1, num_res_blocks_bottleneck):
                 x = res_block_func(x, filters=filters, name="res_" + str(res_block), **kwargs)
 
-        # Decoder
-        with tf.variable_scope("decoder"):
-            iterator = list(zip(range(num_main_blocks), num_res_blocks, skips))
-            for main_block, res_blocks, skip in iterator[::-1]:
-                with tf.variable_scope("block_" + str(main_block + 1)):
-                    # Reduce number of filters
-                    filters //= filters_factor
-                    # Up sample
-                    x = up_sampling_func(x, filters, kernel_size=3,
-                                         strides=spatial_factor,
-                                         name="up_sample_" + str(main_block + 1),
-                                         padding="SAME",
-                                         **kwargs)
-                    if skip_connections:
-                        # Skip connection
-                        x = tf.concat([x, skip], axis=channels_axis())
-                    # Repeated residual blocks
-                    for res_block in range(res_blocks):
-                        x = res_block_func(x, filters=filters, name="res_" + str(res_block), **kwargs)
+        iterator = list(zip(range(num_main_blocks), num_res_blocks, skips))
+        for main_block, res_blocks, skip in iterator[::-1]:
+            with tf.variable_scope("up_block_" + str(main_block + 1)):
+                # Reduce number of filters
+                filters //= filters_factor
+                # Up sample
+                x = up_sampling_func(x, filters, kernel_size=3,
+                                     strides=spatial_factor,
+                                     name="up_sample_" + str(main_block + 1),
+                                     data_format=data_format(), padding="SAME",
+                                     **kwargs)
+                if skip_connections:
+                    # Skip connection
+                    x = tf.concat([x, skip], axis=channels_axis())
+                # Repeated residual blocks
+                for res_block in range(res_blocks):
+                    x = res_block_func(x, filters=filters, name="res_" + str(res_block), **kwargs)
 
         # Final convolution of the image
         x = tf.layers.conv2d(x, output_filters, name="conv_out",
                              kernel_size=out_kernel_size,
                              kernel_initializer=gaussian_initializer(),
-                             padding="SAME")
+                             data_format=data_format(), padding="SAME")
         return x
