@@ -6,12 +6,12 @@ __all__ = [
 ]
 
 
-def load_parameters(saver, session, load_dir):
+def load_parameters(saver, session, load_dir, force_delete=False):
     if tf.gfile.Exists(load_dir):
         ckpt = tf.train.get_checkpoint_state(load_dir)
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(session, ckpt.model_checkpoint_path)
-        else:
+        elif force_delete:
             shutil.rmtree(load_dir)
             tf.gfile.MakeDirs(load_dir)
     else:
