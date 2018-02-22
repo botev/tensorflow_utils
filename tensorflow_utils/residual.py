@@ -175,8 +175,7 @@ def unet_resnet(x, num_main_blocks, num_res_blocks,
                 x = up_sampling_func(x, filters, kernel_size=3,
                                      strides=spatial_factor,
                                      name="up_sample_" + str(main_block + 1),
-                                     data_format=data_format(), padding="SAME",
-                                     **kwargs)
+                                     data_format=data_format(), padding="SAME")
                 if skip_connections:
                     # Skip connection
                     x = tf.concat([x, skip], axis=channels_axis())
