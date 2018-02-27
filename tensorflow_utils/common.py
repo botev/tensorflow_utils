@@ -169,7 +169,7 @@ class FlattenFunctionWrapper(object):
             kwargs = dict((k, value) for (k, _), value in zip(self.parameters.items(), values))
             return self.func(**kwargs)
         elif self.use_parameter_names:
-            kwargs = dict((p.name, value) for p, value in zip(self.parameters, values))
+            kwargs = dict((p._shared_name, value) for p, value in zip(self.parameters, values))
             return self.func(**kwargs)
         else:
             return self.func(*values)
