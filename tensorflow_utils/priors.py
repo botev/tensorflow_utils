@@ -74,9 +74,9 @@ def calculate_variance_factor(shape,
 
 
 def gaussian_initializer(mode="FAN_AVG",
-                         truncated=False,
                          scale_factor=1.0,
                          mean=0.0,
+                         truncated=False,
                          seed=None,
                          dtype=tf.float32):
     """
@@ -122,9 +122,9 @@ def gaussian_initializer(mode="FAN_AVG",
 
 
 def gaussian_regularizer(mode="FAN_AVG",
-                         truncated=False,
                          scale_factor=1.0,
-                         mean=0.0):
+                         mean=0.0,
+                         truncated=False):
     """
     Returns a regularizer based on the log probability of the equivalent
     gaussian initializer.
@@ -149,10 +149,10 @@ def gaussian_regularizer(mode="FAN_AVG",
     """
     if mode not in ["NULL", "FAN_IN", "FAN_OUT", "FAN_AVG"]:
         raise TypeError('Unknown mode %s [FAN_IN, FAN_OUT, FAN_AVG]', mode)
-    if isinstance(scale_factor, tf.numbers.Integral):
-        raise ValueError("scale_factor cannot be an integer: %s" % (scale_factor,))
 
-    def _log_prob_fn(tensor):
+    scale_factor = tf.cast(scale_factor, tf.float32)
+    # For a single tensor
+    def _log_prob_single(tensor):
         stddev = tf.sqrt(scale_factor / calculate_variance_factor(tensor.shape, mode))
         z = (tensor - mean) / stddev
         log_prob_z = - (z ** 2 + tf.log(2 * pi)) / 2
@@ -164,5 +164,12 @@ def gaussian_regularizer(mode="FAN_AVG",
             log_prob = tf.where(invalid, -inf, log_prob)
         # Return negative as this is a regularizer
         return - log_prob
+
+    # For one or more tensors
+    def _log_prob_fn(tensors):
+        if isinstance(tensors, (list, tuple)):
+            return sum(_log_prob_single(tensor) for tensor in tensors)
+        else:
+            return _log_prob_single(tensors)
 
     return _log_prob_fn
