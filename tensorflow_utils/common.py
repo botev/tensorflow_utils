@@ -12,13 +12,33 @@ __all__ = [
 
 
 def celu(x, axis=None):
-    """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but with ELU """
+    """ Like concatenated ReLU (http://arxiv.org/abs/1603.05201), but with ELU """
     if axis is not None:
         return tf.nn.elu(tf.concat(values=[x, -x], axis=axis))
     if x.shape.ndims == 2:
         return tf.nn.elu(tf.concat(values=[x, -x], axis=1))
     else:
         return tf.nn.elu(tf.concat(values=[x, -x], axis=channels_axis()))
+
+
+def silu(x):
+    """ Sigmoid multiplied by its inputs https://arxiv.org/pdf/1702.03118.pdf """
+    return x * tf.sigmoid(x)
+
+
+def swish(x, axis=-1):
+    """ Like silu, but with a trainable parameter https://arxiv.org/pdf/1710.05941.pdf """
+    if not isinstance(axis, (list, tuple)):
+        axis = [axis]
+    axis = [a if a > 0 else x.shape.ndims - a for a in axis]
+    missing_axes = [i for i in range(x.shape.ndims) if i not in axis]
+    shape = [x.shape[a] for a in axis]
+
+    with tf.variable_scope("swish"):
+        beta = tf.get_variable("beta", shape=shape, dtype=x.dtype)
+        for ma in missing_axes:
+            beta = tf.expand_dims(beta, ma)
+        return x * tf.sigmoid(beta * x)
 
 
 def activation_from_string(name, *args, **kwargs):
@@ -39,7 +59,7 @@ def activation_from_string(name, *args, **kwargs):
         NotImplementedError: if the `name` is not found.
     """
     if not isinstance(name, str):
-        warn("activation_from_string was given not a string, but " + str(name))
+        warn("activation_from_string was given not a string, but " + str(type(name)))
         return name
     elif name == "tanh":
         return tf.tanh
@@ -59,6 +79,10 @@ def activation_from_string(name, *args, **kwargs):
         return celu
     elif name == "selu":
         return tf.nn.selu
+    elif name == "silu":
+        return silu
+    elif name == "swish":
+        return swish
     else:
         raise NotImplementedError()
 
@@ -173,5 +197,3 @@ class FlattenFunctionWrapper(object):
             return self.func(**kwargs)
         else:
             return self.func(*values)
-
-
